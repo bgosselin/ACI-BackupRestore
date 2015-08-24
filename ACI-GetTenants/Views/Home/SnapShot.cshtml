@@ -1,0 +1,55 @@
+﻿
+@model ACI_GetTenants.Models.ApicJsonModel
+@using (Html.BeginForm("CheckInTenant", "Home", FormMethod.Post))
+{
+ 
+    <div class="row">
+        <div class="col-md-2"></div>
+        <div class="col-md-8">
+            <div class="jumbotron">
+                <h2>SnapShots</h2>
+                <H5>Check-In ACI Tenant Configuraiton SnapShots along with revision comments</H5>
+            </div>
+
+            <div class="form-inline">
+                <table>
+                    <tr>
+                        <td>
+                            <label for="exampleInputEmail1">Select Tenant:&nbsp;&nbsp;&nbsp;&nbsp;</label>
+                        </td>
+                        <td>
+                            <select class="form-control" id="tenantSelect" name="tenantSelect" style="width:400px">
+                                @foreach (var tenantName in Model.imdata.Select(t => t.fvTenant).Select(t => t.attributes).Select(t => t.name))
+                                {
+                                    <option value=@tenantName>
+                                        @tenantName
+                                    </option>
+                                }
+                            </select>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>&nbsp;&nbsp;</td>
+                    </tr>
+                    <tr>
+                        <td>
+                            <label for="exampleInputEmail1">Comments:&nbsp;&nbsp;&nbsp;&nbsp;</label>
+                        </td>
+                        <td>
+                            <input class="form-control" name="comments" id="comments" style="width:900px" placeholder="comments...">
+                        </td>
+                    </tr>
+                </table>
+            </div>
+
+         
+           
+            <div class="text-right">
+                <br /><br />
+                <button type="submit" class="btn btn-primary">Check-In</button>
+                <br /><br />
+            </div>
+
+        </div>
+    </div>
+}

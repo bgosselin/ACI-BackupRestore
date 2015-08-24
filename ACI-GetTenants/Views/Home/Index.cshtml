@@ -1,0 +1,49 @@
+﻿@{
+    ViewBag.Title = "Tenants";
+
+}
+@model ACI_GetTenants.Models.ApicJsonModel
+@using (Html.BeginForm("UpdateTenant", "Home", FormMethod.Post))
+{
+    <h2>@ViewBag.Title</h2>
+    <br /><br />
+    <div class="row">
+        <p>hey</p>
+        <div class="col-md-4">
+            <div class="text-center">
+                <div class="form-group">
+                    <div class="input-group">
+                        <select id="tenantSelect" name="tenantSelect" style="width:200px" class="form-control">
+                            @foreach (var tenantName in Model.imdata.Select(t => t.fvTenant).Select(t => t.attributes).Select(t => t.name))
+                            {
+                                <option value=@tenantName>
+                                    @tenantName
+                                </option>
+                            }
+                        </select>
+                    </div><br /><br />
+                </div>
+            </div>
+            <div>
+                <br /><br />
+                <button type="submit" class="btn btn-primary">Go</button>
+                <br /><br />
+            </div>
+
+
+        </div>
+
+        <div class="col-md-8 form-group input-group">
+            <div class="panel panel-default">
+                <div class="panel-heading">
+                    XML POST
+                </div>
+                <div class="panel-body">
+                    <textarea id="textarea1" style="max-width: 810px; width: 700px; border:none" rows="22" cols="50">@ViewBag.pageResults</textarea>
+                </div>
+            </div>
+
+
+        </div>
+    </div>
+}
