@@ -1,4 +1,21 @@
-﻿using System;
+﻿/*
+  Blair Gosselin (blair.gosselin@live.com)
+ * 
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+ 
+      http://www.apache.org/licenses/LICENSE-2.0
+ 
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+ *
+ */
+
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Web;
@@ -23,46 +40,74 @@ namespace ACI_GetTenants.Controllers
 {
     public class HomeController : Controller
     {
+        /// <summary>
+        /// Main Method launched when navigating to the site
+        /// </summary>
+        /// <returns></returns>
         public ActionResult Index()
         {
-            // main page
-            //CreateTenantSnapShot("mytenant", "This is a test", @"C:\");
 
-            //RollBackTenant("Tester-66b5584c-8f07-4df0-900a-c11c0070bae4", @"C:\zzTest");
-
+            //collection is a data model to be used by the MVC view.
+            //In this case collection is returned by the APIC.  In this case the request is for all tenants so collection returns a list of the tenants to be used on the SnapShot page
             var collection = ApicGetRequest("api/node/class/fvTenant.json?");
-            //var collection = new ApicJsonModel();
+
+            //Go to the SnapShot page
             return View("SnapShot", collection);
             
         }
 
+        /// <summary>
+        /// SnapShot page 
+        /// </summary>
+        /// <returns></returns>
         public ActionResult SnapShot()
         {
 
+            //collection is a data model to be used by the MVC view
+            //in this case collection is returned by the APIC.  In this case the request is for all tenants so collection returns a list of the tenants to be used on the SnapShot page
             var collection = ApicGetRequest("api/node/class/fvTenant.json?");
-            //var collection = new ApicJsonModel();
-            return View(collection);
+
+            //Go to the SnapShot page
+            return View("SnapShot", collection);
         }
 
+        /// <summary>
+        /// RollBack Page
+        /// </summary>
+        /// <returns></returns>
         public ActionResult RollBack()
         {
 
+            //Collect is a model to be used by the VMC view
             var collection = new TenantSnapShots();
-            //var tenantModelFromApic = ApicGetRequest("api/node/class/fvTenant.json?");
-            collection.Tenants = GetTenantList(@"C:\zzTest");
-            collection.CommentsByTenant = GetSnapShotsByTenant(@"C:\zzTest", collection.Tenants[0].tenantName);//);
+            var SnapShotDirectory = GetWebConfigValues("LocalSnapShotDirectory");
+
+            //Get the tenants that have a saved SnapShots
+            collection.Tenants = GetTenantList(SnapShotDirectory);
+
+            //Get the SnapShots available for the active tenant
+            //In this case, set the first returned tenant as active until the use selects a differnet tenant in the MVC view
+            collection.CommentsByTenant = GetSnapShotsByTenant(SnapShotDirectory, collection.Tenants[0].tenantName);//);
             collection.Tenants[0].selected = true;
+
+            //Load RollBack page
             return View(collection);
         }
 
+        /// <summary>
+        /// Change Selected Tenant of the RollBack page
+        /// </summary>
+        /// <param name="selectedTenant"></param>
+        /// <returns></returns>
         public ActionResult RollBackReload(string selectedTenant)
         {
 
-            
+            //Similar as RollBack() except the active tenant is defined by user driven input
             var collection = new TenantSnapShots();
-            //var tenantModelFromApic = ApicGetRequest("api/node/class/fvTenant.json?");
-            collection.Tenants = GetTenantList(@"C:\zzTest");
-            collection.CommentsByTenant = GetSnapShotsByTenant(@"C:\zzTest", selectedTenant);
+            var SnapShotDirectory = GetWebConfigValues("LocalSnapShotDirectory");
+
+            collection.Tenants = GetTenantList(SnapShotDirectory);
+            collection.CommentsByTenant = GetSnapShotsByTenant(SnapShotDirectory, selectedTenant);
             foreach (var tenant in collection.Tenants)
             {
                 if (tenant.tenantName == selectedTenant)
@@ -75,35 +120,30 @@ namespace ACI_GetTenants.Controllers
             return View("RollBack", collection);
         }
 
-        public ActionResult RollBackExecute(string currentTenant, string selectedSnapShot, string submitButton)
+        /// <summary>
+        /// RollBack the user Selected Tenant
+        /// </summary>
+        /// <param name="currentTenant"></param>
+        /// <param name="selectedSnapShot"></param>
+        /// <returns></returns>
+        public ActionResult RollBackExecute(string currentTenant, string selectedSnapShot)
         {
 
-         
+            //Same as RollBack() except the selected snapshot is used to trigger a the RollBackTenant method
             var collection = new TenantSnapShots();
-            //var tenantModelFromApic = ApicGetRequest("api/node/class/fvTenant.json?");
-            if (submitButton == "Remove")
-            {
-                string[] filesToDelete = Directory.GetFiles(@"C:\zzTest", currentTenant + "----" + selectedSnapShot);
-                foreach (var file in filesToDelete)
-                {
-                    if (System.IO.File.Exists(file))
-                    {
-                        System.IO.File.Delete(file);
-                    }
-                }
-            }
+            var SnapShotDirectory = GetWebConfigValues("LocalSnapShotDirectory");
 
-            collection.Tenants = GetTenantList(@"C:\zzTest");
-            collection.CommentsByTenant = GetSnapShotsByTenant(@"C:\zzTest", currentTenant);
+
+            collection.Tenants = GetTenantList(SnapShotDirectory);
+            collection.CommentsByTenant = GetSnapShotsByTenant(SnapShotDirectory, currentTenant);
             foreach (var tenant in collection.Tenants)
             {
                 if (tenant.tenantName == currentTenant)
                 {
                     tenant.selected = true;
-                    //if (submitButton == "RollBack")
-                    //{
-                        RollBackTenant(tenant.tenantName, selectedSnapShot, @"C:\zzTest");
-                    //}
+
+                    RollBackTenant(tenant.tenantName, selectedSnapShot, SnapShotDirectory);
+
                 }
             }
 
@@ -112,19 +152,17 @@ namespace ACI_GetTenants.Controllers
 
         /// <summary>
         /// This does nothing yet!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        /// Potential feature expansion - providing uses with the ability to delete unwanted SnapShots
         /// </summary>
         /// <param name="selectedTenant"></param>
         /// <param name="selectedSnapShot"></param>
         /// <returns></returns>
         public ActionResult DeleteSnapShot(string selectedTenant, string selectedSnapShot)
         {
-
-
-            
-
             var collection = new TenantSnapShots();
+            var SnapShotDirectory = GetWebConfigValues("LocalSnapShotDirectory");
             //var tenantModelFromApic = ApicGetRequest("api/node/class/fvTenant.json?");
-            string[] filesToDelete = Directory.GetFiles(@"C:\zzTest", selectedTenant + "----" + selectedSnapShot);
+            string[] filesToDelete = Directory.GetFiles(SnapShotDirectory, selectedTenant + "----" + selectedSnapShot);
             foreach (var file in filesToDelete)
             {
                 if (System.IO.File.Exists(file))
@@ -135,8 +173,8 @@ namespace ACI_GetTenants.Controllers
             }
 
 
-            collection.Tenants = GetTenantList(@"C:\zzTest");
-            collection.CommentsByTenant = GetSnapShotsByTenant(@"C:\zzTest", selectedTenant);
+            collection.Tenants = GetTenantList(SnapShotDirectory);
+            collection.CommentsByTenant = GetSnapShotsByTenant(SnapShotDirectory, selectedTenant);
             foreach (var tenant in collection.Tenants)
             {
                 if (tenant.tenantName == selectedTenant)
@@ -150,7 +188,12 @@ namespace ACI_GetTenants.Controllers
         }
 
  
-
+        /// <summary>
+        /// Returns a list of comments for all the SnapShots of the selected Tenant
+        /// </summary>
+        /// <param name="directory"></param>
+        /// <param name="tenantName"></param>
+        /// <returns></returns>
         public List<SnapShotComment> GetSnapShotsByTenant(string directory, string tenantName)
         {
             List<SnapShotComment> commentsByTenant = new List<SnapShotComment>();
@@ -160,6 +203,7 @@ namespace ACI_GetTenants.Controllers
 
             foreach (string commentFile in commentFiles)
             {
+                //Parse the filenames for the GUID
                 guid = commentFile.Replace(directory+@"\"+tenantName+"----", "").Replace(".txt","");
               
                 comment = System.IO.File.ReadAllText(commentFile);
@@ -169,27 +213,29 @@ namespace ACI_GetTenants.Controllers
             return commentsByTenant;
         }
 
+        /// <summary>
+        /// Returns a list of all the tenants which have a SnapShot file in the directory 
+        /// This is not the same as a GET request to the APIC for tenants, this method provides only tenants that have a saved SnapShot
+        /// </summary>
+        /// <param name="directory"></param>
+        /// <returns></returns>
         public List<Tenant> GetTenantList(string directory)
         {
-            /*
-            int i=0;
-            List<Tenant> Tenants = new List<Tenant>(); 
-            foreach (string tenantName in collection.imdata.Select(t => t.fvTenant).Select(t => t.attributes).Select(t => t.name))
-            {
-                Tenants.Add(new Tenant(tenantName, false));
 
-            }*/
             List<Tenant> Tenants = new List<Tenant>();
             string tenantName;
             string[] commentFiles = Directory.GetFiles(directory, "*.txt");
 
             foreach (string commentFile in commentFiles)
             {
-
+                //parse the file names for the tenant name
                 tenantName = Regex.Replace(commentFile, "----(.*?)(?:$)", "");
                 tenantName = tenantName.Replace(directory + @"\", "");
+
+                //If there are is at lease one record in the SnapShot directory than add it
                 if (Tenants.Count()>0)
                 {
+                    //Only add the name of each tenant onece
                     if (tenantName != Tenants.Last().tenantName)
                     {
                         Tenants.Add(new Tenant(tenantName, false));
@@ -204,35 +250,18 @@ namespace ACI_GetTenants.Controllers
 
             return Tenants;
         }
-        public ActionResult Tenant()
-        {
-            
-            var collection = ApicGetRequest("api/node/class/fvTenant.json?");
-            return View(collection);
-        }
 
-        
+
+        /// <summary>
+        /// SnapShot Page; add new SnapShot
+        /// </summary>
+        /// <returns></returns>
         public ActionResult CheckInTenant()
         {
             string tenant = Request.Form["tenantSelect"];
             string comments = Request.Form["comments"];
-            /*
-            XMLDeleteTenant(Request.Form["tenantSelect"]);
-            scriptSettings.StaticXMLFileSource(@"DynamicScripts\Delete_Tenant.cfg");
-            Result = ExecutePythonScript(scriptSettings);
-            var readLines = System.IO.File.ReadAllText(@"C:\ACIDemo\DynamicScripts\DynamicScript_Delete_Tenant.xml");
-
-            ViewBag.xmlOutput = readLines;
-             * 
-             * 
-        */
-
-
-            //RollBackTenant("5b8c4a44-5a61-4b47-bf93-dd4fc6eebe8e", @"C:\");
-            //ViewBag.pageResults = "Done!";
-
-
-            CreateTenantSnapShot(tenant, comments, @"C:\zzTest"); //**************put this in config file
+            var SnapShotDirectory = GetWebConfigValues("LocalSnapShotDirectory");
+            CreateTenantSnapShot(tenant, comments, SnapShotDirectory);
       
 
             var collection = ApicGetRequest("api/node/class/fvTenant.json?");
@@ -251,11 +280,11 @@ namespace ACI_GetTenants.Controllers
             var apicSettings = new APICSettings();
             HttpResponseMessage result;
 
-
+            //Build the components for POST call to the APIC
             var snapShotFile = string.Format(@"{0}\{1}----{2}.xml", snapShotDirectory, tenantName, snapShotGuid);
             var readLines = System.IO.File.ReadAllText(snapShotFile);
             var requestUri = string.Format(@"https://{0}/api/node/mo/.xml", apicSettings.url);
-
+            //login
             if (apicSettings.credentialsSet)
             {
 
@@ -290,6 +319,7 @@ namespace ACI_GetTenants.Controllers
                         result = httpClient.DeleteAsync(apiContent).Result;
                     }
                 
+                    //post the SnapShot for the tenant
                     if (result.IsSuccessStatusCode)
                     {
                         
@@ -314,7 +344,11 @@ namespace ACI_GetTenants.Controllers
             string guidId = guid.ToString();
             string response = null;
             var apicSettings = new APICSettings();
+
+            //build the GET for the APIC
             string request = string.Format("api/node/mo/uni/tn-{0}.xml?query-target=self&rsp-subtree=full&rsp-prop-include=config-only", tenantName);
+
+            //login
             if (apicSettings.credentialsSet)
             
             {
@@ -344,17 +378,18 @@ namespace ACI_GetTenants.Controllers
                     }).Result;
 
 
-
+                    //GET the config for the specified tenant
                     using (StreamReader streamIn = new StreamReader(httpClient.GetStreamAsync(request).Result))
                     {
                         response = streamIn.ReadToEnd();
                         streamIn.Close();
                     }
-                    /////////////////////*********
-                    //need to replace IMDATA in the xml!
+
+                    //modify the config - replace the imdata xml tag with polUni - making the XML usable to for APIC Config REST POSTs
                     string formattedResponse = Regex.Replace(response,"<imdata totalCount(.*?)(?:>|$)","<polUni>");
                     formattedResponse = formattedResponse.Replace("</imdata>", "</polUni>");
 
+                    //build the snapshot file with the date and a GUID for indexing later
                     DateTime today = DateTime.Today;
                     string date = today.ToString();
                     string xmlFile = string.Format(@"{0}\{1}.xml", snapShotDirectory, tenantName+"----"+guidId);
@@ -362,23 +397,26 @@ namespace ACI_GetTenants.Controllers
                     xDoc.LoadXml(formattedResponse);
                     xDoc.Save(xmlFile);
 
-                    
+                    //write the SnapShot file
                     string commentFile = string.Format(@"{0}\{1}.txt", snapShotDirectory, tenantName+"----"+guidId);
                     System.IO.File.WriteAllText(commentFile, date + " - " + comments);
 
-
-                    //remove
-                    //var collection = result.Content.ReadAsAsync<ApicJsonModel>().Result;
 
                 }
             }
          
         }
 
-
+        /// <summary>
+        /// Takes a GET API request and returns the results in a .NET JSON model for ACI responses
+        /// </summary>
+        /// <param name="apicCall"></param>
+        /// <returns></returns>
         public ApicJsonModel ApicGetRequest(string apicCall)
         {
             var apicSettings = new APICSettings();
+
+            //login to the APIC
             if (apicSettings.credentialsSet)
             {
 
@@ -406,7 +444,7 @@ namespace ACI_GetTenants.Controllers
 
                     }).Result;
 
-                
+                    //get the results of the call
                     result = httpClient.GetAsync(apicCall).Result;
 
 
@@ -418,6 +456,20 @@ namespace ACI_GetTenants.Controllers
             {
                 return new ApicJsonModel();
             }
+        }
+
+        /// <summary>
+        /// Get values from the Web Config file at run time by providing the key
+        /// </summary>
+        /// <param name="key"></param>
+        /// <returns>all values are returned as strings</returns>
+        public string GetWebConfigValues(string key)
+        {
+            string value = null;
+
+            value = System.Configuration.ConfigurationManager.AppSettings[key].ToString();
+
+            return value;
         }
     }
 }

@@ -2,9 +2,17 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Web;
+using System.Configuration;
+
+
+
+
 
 namespace ACI_GetTenants.Models
 {
+    /// <summary>
+    /// Data model for the APIC creds needed 
+    /// </summary>
     public class APICSettings
     {
         public string username { get; set; }
@@ -14,17 +22,9 @@ namespace ACI_GetTenants.Models
 
         public APICSettings()
         {
-            username = "admin";
-            password = "C1sco12345";
-            url = "198.18.133.200";
-            credentialsSet = true;
-            /*
-             * This is code to grab APIC creds from the session rather than hardcoding
-             * Use it when using the login page
-             * 
-            username = (string)(Session["username"]);
-            password = (string)(Session["password"]);
-            url = (string)(Session["apicUrl"]);
+            username = System.Configuration.ConfigurationManager.AppSettings["apicUsername"].ToString();
+            password = System.Configuration.ConfigurationManager.AppSettings["apicPassword"].ToString();
+            url = System.Configuration.ConfigurationManager.AppSettings["apicUrl"].ToString();
             credentialsSet = true;
 
 
@@ -35,7 +35,7 @@ namespace ACI_GetTenants.Models
                 url = "";
                 credentialsSet = false;
             }
-             * */
+            
         }
 
     }

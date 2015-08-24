@@ -5,6 +5,11 @@ using System.Web;
 
 namespace ACI_GetTenants.Models
 {
+    /// <summary>
+    /// This is a model used for the RollBack page MVC view
+    /// It collects a list of all tenants which have a SnapShot record saved
+    /// and a list of all the SnapShots including the comments, GUID and checkin data
+    /// </summary>
     public class TenantSnapShots
     {
         public List<SnapShotComment> CommentsByTenant { get; set; }
